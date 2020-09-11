@@ -12,6 +12,8 @@ import (
 	"os"
 )
 
+const line = "----------------------------"
+
 func main() {
 
 	k := dh.Key{P: big.NewInt(0), X: big.NewInt(0), G: big.NewInt(0)}
@@ -36,7 +38,6 @@ func main() {
 	}
 	defer l.Close()
 
-	k.GenerateKey()
 	rsaKey := importKey("privkey.pem")
 	for {
 		fmt.Println("WAITING FOR A CLIENT...")
@@ -48,31 +49,35 @@ func main() {
 		}
 
 		// pubRes = g^(x_s) mod p
+		// New exponential generated at every connection
+		k.GenerateKey()
 		PubVal.Exp(k.G, k.X, k.P)
-		fmt.Println("----------------------------")
+		fmt.Println(line)
 		fmt.Println("The modulus is\n", k.P)
-		fmt.Println("----------------------------")
+		fmt.Println(line)
 		fmt.Println("The generator is\n", k.G)
-		fmt.Println("----------------------------")
+		fmt.Println(line)
 		fmt.Println("Computed exp is\n", PubVal)
-		fmt.Println("----------------------------")
+		fmt.Println(line)
 
 		_, err = c.Read(rcvBuf)
-		keyLen = (int(rcvBuf[0]) * 255) + int(rcvBuf[1])
-		byteVal = rcvBuf[2 : keyLen+2]
+		keyLen = (int(rcvBuf[0]))
+		byteVal = rcvBuf[1 : keyLen+1]
 		ReceivedVal.SetBytes(byteVal)
 		sharedKey.Exp(ReceivedVal, k.X, k.P)
 
 		fmt.Println("Shared key:\n", sharedKey)
-		fmt.Println("----------------------------")
+		fmt.Println(line)
 
+		// Generate the signature
 		toBeSigned = append(toBeSigned, ReceivedVal.Bytes()...)
 		toBeSigned = append(toBeSigned, PubVal.Bytes()...)
 		hashed := sha256.Sum256(toBeSigned)
 		signature, _ := rsa.SignPKCS1v15(rand.Reader, rsaKey, crypto.SHA256, hashed[:])
 		signLen = len(signature)
-		sndBuf = append(sndBuf, byte(len(PubVal.Bytes())/255))
-		sndBuf = append(sndBuf, byte(len(PubVal.Bytes())%255))
+
+		// Generate the byte stream to be sent
+		sndBuf = append(sndBuf, byte(len(PubVal.Bytes())))
 		sndBuf = append(sndBuf, PubVal.Bytes()...)
 		sndBuf = append(sndBuf, byte(signLen))
 		sndBuf = append(sndBuf, signature...)
@@ -82,6 +87,8 @@ func main() {
 			fmt.Println(err)
 			return
 		}
+
+		// reset the buffers
 		sndBuf = nil
 		toBeSigned = nil
 		continue

@@ -11,6 +11,8 @@ import (
 	"os"
 )
 
+const line = "----------------------------"
+
 func main() {
 
 	var PubVal, SharedKey, ReceivedVal = big.NewInt(0), big.NewInt(0), big.NewInt(0)
@@ -30,16 +32,16 @@ func main() {
 	serverKey := importPubKey("pubkey.pem")
 	// pubRes = g^(x_c) mod p
 	PubVal.Exp(k.G, k.X, k.P)
-	fmt.Println("----------------------------")
-	fmt.Println("The modulus is\n", k.P)
-	fmt.Println("----------------------------")
-	fmt.Println("The generator is\n", k.G)
-	fmt.Println("----------------------------")
-	fmt.Println("Computed exp is\n", PubVal)
-	fmt.Println("----------------------------")
 
-	sndBuf = append(sndBuf, byte(len(PubVal.Bytes())/255))
-	sndBuf = append(sndBuf, byte(len(PubVal.Bytes())%255))
+	fmt.Println(line)
+	fmt.Println("The modulus is\n", k.P)
+	fmt.Println(line)
+	fmt.Println("The generator is\n", k.G)
+	fmt.Println(line)
+	fmt.Println("Computed exp is\n", PubVal)
+	fmt.Println(line)
+
+	sndBuf = append(sndBuf, byte(len(PubVal.Bytes())))
 	sndBuf = append(sndBuf, PubVal.Bytes()...)
 
 	CONNECT := arguments[1]
@@ -55,18 +57,19 @@ func main() {
 		return
 	}
 
-	// Receive server public exponential
+	// Receive server public exponential and signature
 	_, err = c.Read(rcvBuf)
-	keyLen = (int(rcvBuf[0]) * 255) + int(rcvBuf[1])
-	byteVal = rcvBuf[2 : keyLen+2]
-	signLen = int(rcvBuf[keyLen+2])
-	signature := rcvBuf[keyLen+3 : keyLen+3+signLen]
+	keyLen = (int(rcvBuf[0]))
+	byteVal = rcvBuf[1 : keyLen+1]
 	ReceivedVal.SetBytes(byteVal)
 	SharedKey.Exp(ReceivedVal, k.X, k.P)
 
 	fmt.Println("Shared key:\n", SharedKey)
-	fmt.Println("----------------------------")
+	fmt.Println(line)
 
+	// Verify the signature
+	signLen = int(rcvBuf[keyLen+1])
+	signature := rcvBuf[keyLen+2 : keyLen+2+signLen]
 	toBeVerified = append(toBeVerified, PubVal.Bytes()...)
 	toBeVerified = append(toBeVerified, ReceivedVal.Bytes()...)
 	hashed := sha256.Sum256(toBeVerified)
@@ -76,6 +79,6 @@ func main() {
 		fmt.Println("Error from verification")
 	} else {
 		fmt.Println("SERVER SIGNATURE VERIFIED")
-		fmt.Println("----------------------------")
+		fmt.Println(line)
 	}
 }

@@ -83,6 +83,7 @@ func main() {
 			return
 		}
 		sndBuf = nil
+		toBeSigned = nil
 		continue
 	}
 

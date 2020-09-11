@@ -1,6 +1,9 @@
 package main
 
 import (
+	"crypto"
+	"crypto/rsa"
+	"crypto/sha256"
 	"fmt"
 	"math/big"
 	"net"
@@ -11,8 +14,8 @@ import (
 func main() {
 
 	var PubVal, SharedKey, ReceivedVal = big.NewInt(0), big.NewInt(0), big.NewInt(0)
-	var sndBuf []byte
-	var keyLen int
+	var sndBuf, toBeVerified []byte
+	var keyLen, signLen int
 	rcvBuf := make([]byte, 512)
 	k := dh.Key{P: big.NewInt(0), X: big.NewInt(0), G: big.NewInt(0)}
 	byteVal := make([]byte, 128)
@@ -24,6 +27,7 @@ func main() {
 	}
 
 	k.GenerateKey()
+	serverKey := importPubKey("pubkey.pem")
 	// pubRes = g^(x_c) mod p
 	PubVal.Exp(k.G, k.X, k.P)
 	fmt.Println("----------------------------")
@@ -55,9 +59,20 @@ func main() {
 	_, err = c.Read(rcvBuf)
 	keyLen = (int(rcvBuf[0]) * 255) + int(rcvBuf[1])
 	byteVal = rcvBuf[2 : keyLen+2]
+	signLen = int(rcvBuf[keyLen+2])
+	signature := rcvBuf[keyLen+3 : keyLen+3+signLen]
 	ReceivedVal.SetBytes(byteVal)
 	SharedKey.Exp(ReceivedVal, k.X, k.P)
 	fmt.Println("Shared key:\n", SharedKey)
 	fmt.Println("----------------------------")
-
+	toBeVerified = append(toBeVerified, PubVal.Bytes()...)
+	toBeVerified = append(toBeVerified, ReceivedVal.Bytes()...)
+	hashed := sha256.Sum256(toBeVerified)
+	err = rsa.VerifyPKCS1v15(serverKey, crypto.SHA256, hashed[:], signature)
+	if err != nil {
+		fmt.Println("Error from verification")
+	} else {
+		fmt.Println("SERVER SIGNATURE VERIFIED")
+		fmt.Println("----------------------------")
+	}
 }

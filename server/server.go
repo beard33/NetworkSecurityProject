@@ -62,6 +62,7 @@ func main() {
 		byteVal = rcvBuf[2 : keyLen+2]
 		ReceivedVal.SetBytes(byteVal)
 		sharedKey.Exp(ReceivedVal, k.X, k.P)
+
 		fmt.Println("Shared key:\n", sharedKey)
 		fmt.Println("----------------------------")
 
@@ -75,6 +76,7 @@ func main() {
 		sndBuf = append(sndBuf, PubVal.Bytes()...)
 		sndBuf = append(sndBuf, byte(signLen))
 		sndBuf = append(sndBuf, signature...)
+
 		_, err = c.Write(sndBuf)
 		if err != nil {
 			fmt.Println(err)

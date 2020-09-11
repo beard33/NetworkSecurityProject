@@ -63,11 +63,14 @@ func main() {
 	signature := rcvBuf[keyLen+3 : keyLen+3+signLen]
 	ReceivedVal.SetBytes(byteVal)
 	SharedKey.Exp(ReceivedVal, k.X, k.P)
+
 	fmt.Println("Shared key:\n", SharedKey)
 	fmt.Println("----------------------------")
+
 	toBeVerified = append(toBeVerified, PubVal.Bytes()...)
 	toBeVerified = append(toBeVerified, ReceivedVal.Bytes()...)
 	hashed := sha256.Sum256(toBeVerified)
+
 	err = rsa.VerifyPKCS1v15(serverKey, crypto.SHA256, hashed[:], signature)
 	if err != nil {
 		fmt.Println("Error from verification")

@@ -4,18 +4,17 @@ import (
 	"fmt"
 	"math/big"
 	"net"
-	"netsecProject/utils/dh"
+	"netsecProject/utils/DH/dh"
 	"os"
 )
 
 func main() {
 
-	p := dh.GetP()
-	g := big.NewInt(2)
-	key := big.NewInt(0)
-	sPubVal := big.NewInt(0)
-	exp := dh.GenerateExponent()
-	pubRes := big.NewInt(0)
+	var PubVal, SharedKey, ReceivedVal = big.NewInt(0), big.NewInt(0), big.NewInt(0)
+	var sndBuf []byte
+	var keyLen int
+	rcvBuf := make([]byte, 512)
+	k := dh.Key{P: big.NewInt(0), X: big.NewInt(0), G: big.NewInt(0)}
 	byteVal := make([]byte, 128)
 
 	arguments := os.Args
@@ -24,15 +23,20 @@ func main() {
 		return
 	}
 
+	k.GenerateKey()
 	// pubRes = g^(x_c) mod p
-	pubRes.Exp(g, exp, p)
+	PubVal.Exp(k.G, k.X, k.P)
 	fmt.Println("----------------------------")
-	fmt.Println("The modulus is\n", p)
+	fmt.Println("The modulus is\n", k.P)
 	fmt.Println("----------------------------")
-	fmt.Println("The generator is\n", g)
+	fmt.Println("The generator is\n", k.G)
 	fmt.Println("----------------------------")
-	fmt.Println("Computed exp is\n", pubRes)
+	fmt.Println("Computed exp is\n", PubVal)
 	fmt.Println("----------------------------")
+
+	sndBuf = append(sndBuf, byte(len(PubVal.Bytes())/255))
+	sndBuf = append(sndBuf, byte(len(PubVal.Bytes())%255))
+	sndBuf = append(sndBuf, PubVal.Bytes()...)
 
 	CONNECT := arguments[1]
 	c, err := net.Dial("tcp", CONNECT)
@@ -41,37 +45,19 @@ func main() {
 		return
 	}
 
-	_, err = c.Write(pubRes.Bytes())
+	_, err = c.Write(sndBuf)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
 	// Receive server public exponential
-	_, err = c.Read(byteVal)
-	sPubVal.SetBytes(byteVal)
-	key.Exp(sPubVal, exp, p)
-	fmt.Println("Generated key:\n", key)
+	_, err = c.Read(rcvBuf)
+	keyLen = (int(rcvBuf[0]) * 255) + int(rcvBuf[1])
+	byteVal = rcvBuf[2 : keyLen+2]
+	ReceivedVal.SetBytes(byteVal)
+	SharedKey.Exp(ReceivedVal, k.X, k.P)
+	fmt.Println("Shared key:\n", SharedKey)
 	fmt.Println("----------------------------")
 
-	_, err = c.Write(pubRes.Bytes())
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	/*
-		for {
-			reader := bufio.NewReader(os.Stdin)
-			fmt.Print(">> ")
-			text, _ := reader.ReadString('\n')
-			fmt.Fprintf(c, text+"\n")
-
-			message, _ := bufio.NewReader(c).ReadString('\n')
-			fmt.Print("->: " + message)
-			if strings.TrimSpace(string(text)) == "STOP" {
-				fmt.Println("TCP client exiting...")
-				return
-			}
-		}
-	*/
 }

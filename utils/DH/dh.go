@@ -2,6 +2,7 @@ package dh
 
 import (
 	"crypto/rand"
+	"log"
 	"math/big"
 )
 
@@ -16,7 +17,7 @@ func (k Key) GenerateKey() {
 	lim := big.NewInt(2)
 	gen, err := rand.Int(rand.Reader, big.NewInt(0).Sub(k.P, lim))
 	if err != nil {
-		panic("Error in generating the exponent")
+		log.Fatal("Error in generating the exponent", err)
 	}
 	k.X.Add(gen, big.NewInt(1))
 	k.G.SetString("2", 10)

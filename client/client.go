@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"fmt"
+	"log"
 	"math/big"
 	"net"
 	"netsecProject/utils/DH/dh"
@@ -38,27 +39,29 @@ func main() {
 	fmt.Println(line)
 	fmt.Println("The generator is\n", k.G)
 	fmt.Println(line)
-	fmt.Println("Computed exp is\n", PubVal)
+	fmt.Println("Public exp is\n", PubVal)
 	fmt.Println(line)
 
+	// Create the buf to be sent
 	sndBuf = append(sndBuf, byte(len(PubVal.Bytes())))
 	sndBuf = append(sndBuf, PubVal.Bytes()...)
 
 	CONNECT := arguments[1]
 	c, err := net.Dial("tcp", CONNECT)
 	if err != nil {
-		fmt.Println(err)
-		return
+		log.Fatal(err)
 	}
 
 	_, err = c.Write(sndBuf)
 	if err != nil {
-		fmt.Println(err)
-		return
+		log.Fatal(err)
 	}
 
 	// Receive server public exponential and signature
 	_, err = c.Read(rcvBuf)
+	if err != nil {
+		log.Fatal(err)
+	}
 	keyLen = (int(rcvBuf[0]))
 	byteVal = rcvBuf[1 : keyLen+1]
 	ReceivedVal.SetBytes(byteVal)
@@ -76,7 +79,7 @@ func main() {
 
 	err = rsa.VerifyPKCS1v15(serverKey, crypto.SHA256, hashed[:], signature)
 	if err != nil {
-		fmt.Println("Error from verification")
+		log.Fatal("ERROR in signature:", err)
 	} else {
 		fmt.Println("SERVER SIGNATURE VERIFIED")
 		fmt.Println(line)

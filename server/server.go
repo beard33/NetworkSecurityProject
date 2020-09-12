@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"fmt"
+	"log"
 	"math/big"
 	"net"
 	"netsecProject/utils/DH/dh"
@@ -33,8 +34,7 @@ func main() {
 	PORT := ":" + arguments[1]
 	l, err := net.Listen("tcp", PORT)
 	if err != nil {
-		fmt.Println(err)
-		return
+		log.Fatal(err)
 	}
 	defer l.Close()
 
@@ -44,8 +44,7 @@ func main() {
 
 		c, err := l.Accept()
 		if err != nil {
-			fmt.Println(err)
-			return
+			log.Fatal(err)
 		}
 
 		// pubRes = g^(x_s) mod p
@@ -57,10 +56,13 @@ func main() {
 		fmt.Println(line)
 		fmt.Println("The generator is\n", k.G)
 		fmt.Println(line)
-		fmt.Println("Computed exp is\n", PubVal)
+		fmt.Println("Public exp is\n", PubVal)
 		fmt.Println(line)
 
 		_, err = c.Read(rcvBuf)
+		if err != nil {
+			log.Fatal(err)
+		}
 		keyLen = (int(rcvBuf[0]))
 		byteVal = rcvBuf[1 : keyLen+1]
 		ReceivedVal.SetBytes(byteVal)
@@ -84,7 +86,7 @@ func main() {
 
 		_, err = c.Write(sndBuf)
 		if err != nil {
-			fmt.Println(err)
+			log.Fatal(err)
 			return
 		}
 
